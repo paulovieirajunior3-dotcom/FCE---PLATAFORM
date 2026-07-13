@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Football Cognitive Engine</title>
+<style>
+  @import url('https://cdnjs.cloudflare.com/ajax/libs/ibm-plex/6.0.0-beta5/css/ibm-plex.min.css');
+  :root {
+    --slate-950: #10151b; --slate-900: #161d25; --slate-700: #2c3844;
+    --chalk: #eef1f0; --chalk-dim: #b9c2c8; --amber: #d7a34e; --slate-500: #64768a;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin:0; padding:0; background:var(--slate-950); color:var(--chalk);
+    font-family:'IBM Plex Sans',sans-serif; min-height:100vh; display:flex; align-items:center; justify-content:center; }
+  .wrap { max-width: 560px; padding: 40px 24px; text-align:center; }
+  .eyebrow { font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:.14em;
+    text-transform:uppercase; color:var(--amber); margin:0 0 14px; }
+  h1 { font-family:'IBM Plex Mono',monospace; font-weight:500; font-size:34px; margin:0 0 14px; letter-spacing:-.01em; }
+  p.lead { color:var(--chalk-dim); font-size:15px; line-height:1.7; margin:0 0 34px; }
+  a.cta {
+    display:inline-block; font-family:'IBM Plex Mono',monospace; font-size:14px; color:var(--slate-950);
+    background:var(--amber); padding:14px 28px; border-radius:2px; text-decoration:none; font-weight:500;
+    letter-spacing:.02em;
+  }
+  .examples { margin-top:30px; display:flex; flex-wrap:wrap; gap:8px; justify-content:center; }
+  .examples span { font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--slate-500);
+    border:1px solid var(--slate-700); padding:5px 10px; border-radius:2px; }
+  footer { margin-top:48px; font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--slate-500); line-height:1.8; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <p class="eyebrow">Base Oficial v1.0</p>
+    <h1>Football Cognitive Engine</h1>
+    <p class="lead">Explore o conhecimento oficial do futebol — conceitos, funções, jogadores, organizações e regras, todos rastreáveis até a fonte. Nenhuma resposta é gerada por modelo de linguagem.</p>
+    <a class="cta" href="/explorer/">Abrir o Explorer →</a>
+    <div class="examples">
+      <span>Falso 9</span><span>Pressão Alta</span><span>Busquets</span><span>Guardiola</span><span>Barcelona</span>
+    </div>
+    <footer>101 Objetos · 802 relações · 3 Princípios Oficiais<br>Compilado da Base Oficial — Release v1.0</footer>
+  </div>
+</body>
+</html>
