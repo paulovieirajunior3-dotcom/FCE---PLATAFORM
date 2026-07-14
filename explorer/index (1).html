@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FCE Explorer 0.1</title>
+<style>
+  :root {
+    --slate-950: #10151b;
+    --slate-900: #161d25;
+    --slate-800: #1f2932;
+    --slate-700: #2c3844;
+    --slate-500: #64768a;
+    --chalk: #eef1f0;
+    --chalk-dim: #b9c2c8;
+    --amber: #d7a34e;
+    --amber-dim: #8a6b39;
+    --line: rgba(238,241,240,0.09);
+    --mono: 'IBM Plex Mono', 'SFMono-Regular', Consolas, monospace;
+    --sans: 'IBM Plex Sans', 'Inter', -apple-system, sans-serif;
+  }
+  @import url('https://cdnjs.cloudflare.com/ajax/libs/ibm-plex/6.0.0-beta5/css/ibm-plex.min.css');
+
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--slate-950);
+    color: var(--chalk);
+    font-family: var(--sans);
+    min-height: 100vh;
+  }
+  body::before {
+    content: "";
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(var(--line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line) 1px, transparent 1px);
+    background-size: 64px 64px;
+    pointer-events: none;
+    opacity: 0.5;
+    z-index: 0;
+  }
+  .wrap { position: relative; z-index: 1; max-width: 860px; margin: 0 auto; padding: 56px 24px 120px; }
+
+  header { margin-bottom: 40px; }
+  .eyebrow {
+    font-family: var(--mono); font-size: 12px; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--amber); margin: 0 0 10px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .eyebrow .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--amber); }
+  h1 {
+    font-family: var(--mono); font-weight: 500; font-size: 28px; letter-spacing: -0.01em;
+    margin: 0 0 6px; color: var(--chalk);
+  }
+  .subtitle { color: var(--chalk-dim); font-size: 14px; margin: 0; line-height: 1.6; max-width: 52ch; }
+
+  .search-shell {
+    position: relative; margin-top: 28px;
+  }
+  .search-box {
+    width: 100%; background: var(--slate-900); border: 1px solid var(--slate-700);
+    border-radius: 2px; padding: 16px 18px; color: var(--chalk); font-size: 16px;
+    font-family: var(--sans); outline: none; transition: border-color .15s ease;
+  }
+  .search-box:focus { border-color: var(--amber-dim); }
+  .search-box::placeholder { color: var(--slate-500); }
+  .hint { font-family: var(--mono); font-size: 11px; color: var(--slate-500); margin-top: 8px; letter-spacing: 0.02em; }
+
+  .suggestions { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    font-family: var(--mono); font-size: 12px; color: var(--chalk-dim);
+    border: 1px solid var(--slate-700); padding: 6px 12px; border-radius: 2px;
+    cursor: pointer; background: transparent; transition: all .15s ease;
+  }
+  .chip:hover { border-color: var(--amber-dim); color: var(--amber); }
+
+  .empty-state { margin-top: 64px; color: var(--slate-500); font-size: 14px; line-height: 1.7; }
+  .empty-state strong { color: var(--chalk-dim); }
+
+  .card {
+    margin-top: 32px; border: 1px solid var(--slate-700); background: var(--slate-900);
+    border-radius: 3px; overflow: hidden;
+  }
+  .card-head {
+    padding: 22px 24px 18px; border-bottom: 1px solid var(--line);
+    display: flex; justify-content: space-between; align-items: flex-start; gap: 16px;
+  }
+  .card-id {
+    font-family: var(--mono); font-size: 11px; color: var(--amber); letter-spacing: 0.08em;
+    text-transform: uppercase; margin: 0 0 6px;
+  }
+  .card-title { font-family: var(--mono); font-size: 22px; margin: 0; color: var(--chalk); font-weight: 500; }
+  .card-family {
+    font-family: var(--mono); font-size: 10px; color: var(--slate-950); background: var(--amber);
+    padding: 4px 9px; border-radius: 2px; letter-spacing: 0.06em; white-space: nowrap; height: fit-content;
+  }
+
+  .confidence-bar { padding: 12px 24px; background: var(--slate-800); display: flex; gap: 22px; flex-wrap: wrap; }
+  .conf-item { font-family: var(--mono); font-size: 11px; color: var(--chalk-dim); }
+  .conf-item b { color: var(--chalk); font-weight: 500; }
+
+  .card-body { padding: 22px 24px; }
+  .field { margin-bottom: 20px; }
+  .field:last-child { margin-bottom: 0; }
+  .field-label {
+    font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em;
+    color: var(--slate-500); margin: 0 0 8px;
+  }
+  .field-value { font-size: 14.5px; line-height: 1.7; color: var(--chalk-dim); }
+  .field-value strong { color: var(--chalk); }
+
+  .rel-group { display: flex; flex-wrap: wrap; gap: 8px; }
+  .rel-chip {
+    font-family: var(--mono); font-size: 12px; color: var(--chalk); background: var(--slate-800);
+    border: 1px solid var(--slate-700); padding: 7px 11px; border-radius: 2px; cursor: pointer;
+    transition: all .15s ease; display: inline-flex; align-items: center; gap: 6px;
+  }
+  .rel-chip:hover { border-color: var(--amber); background: var(--slate-700); }
+  .rel-chip .verb { color: var(--slate-500); font-size: 10px; }
+
+  .compare-toggle {
+    margin-top: 18px; font-family: var(--mono); font-size: 11px; color: var(--amber);
+    cursor: pointer; text-decoration: underline; text-underline-offset: 3px;
+  }
+
+  /* ===== P-004: Próximo Passo ===== */
+  .proximo-passo { margin-top: 22px; padding-top: 20px; border-top: 1px solid var(--line); }
+  .pp-title {
+    font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em;
+    color: var(--slate-500); margin: 0 0 12px;
+  }
+  .pp-list { display: flex; flex-direction: column; gap: 8px; }
+  .pp-item {
+    display: flex; align-items: center; gap: 12px; padding: 10px 12px;
+    border: 1px solid var(--slate-700); border-radius: 2px; background: var(--slate-800);
+  }
+  .pp-item.is-publicado { border-color: rgba(215,163,78,0.35); }
+  .pp-item.is-catalogado { opacity: 0.85; }
+  .pp-item.is-naocatalogado { border-style: dashed; opacity: 0.65; }
+  .pp-icon { font-family: var(--mono); font-size: 13px; width: 18px; text-align: center; flex-shrink: 0; }
+  .pp-icon.ok { color: var(--amber); }
+  .pp-icon.wait { color: var(--slate-500); }
+  .pp-body { flex: 1; min-width: 0; }
+  .pp-verb { font-family: var(--mono); font-size: 13px; color: var(--chalk); margin: 0; }
+  .pp-status { font-family: var(--mono); font-size: 11px; color: var(--slate-500); margin: 2px 0 0; }
+  .pp-status.publicado { color: var(--amber-dim); }
+  .pp-btn {
+    font-family: var(--mono); font-size: 10px; color: var(--chalk-dim); background: transparent;
+    border: 1px solid var(--slate-700); padding: 5px 9px; border-radius: 2px; cursor: pointer;
+    white-space: nowrap; transition: all .15s ease;
+  }
+  .pp-btn:hover { border-color: var(--amber-dim); color: var(--amber); }
+  .pp-btn.done { color: var(--amber); border-color: var(--amber-dim); cursor: default; }
+  .pp-result {
+    margin-top: 8px; padding: 9px 11px; background: var(--slate-900); border-radius: 2px;
+    font-size: 12px; color: var(--chalk-dim); line-height: 1.5;
+  }
+  .pp-why {
+    font-family: var(--mono); font-size: 10px; color: var(--slate-500); cursor: help;
+    border-bottom: 1px dotted var(--slate-500); margin-left: 6px;
+  }
+  .pp-item.is-clickable { cursor: pointer; }
+  .pp-item.is-clickable:hover { border-color: var(--amber-dim); }
+  .pp-expand-icon { color: var(--slate-500); font-size: 11px; margin-left: 6px; }
+  .pp-detail {
+    margin-top: 12px; padding: 14px; background: var(--slate-900); border-radius: 2px;
+    border-left: 2px solid var(--amber-dim); cursor: default;
+  }
+  .pp-detail-field { margin-bottom: 12px; }
+  .pp-detail-field:last-child { margin-bottom: 0; }
+  .pp-detail-label {
+    display: block; font-family: var(--mono); font-size: 10px; text-transform: uppercase;
+    letter-spacing: 0.08em; color: var(--amber-dim); margin-bottom: 4px;
+  }
+  .pp-detail-field p, .pp-detail-field ul { margin: 0; font-size: 13px; line-height: 1.6; color: var(--chalk-dim); }
+  .pp-detail-field ul { padding-left: 18px; }
+  .pp-detail-field li { margin-bottom: 4px; }
+
+  .panorama {
+    margin-bottom: 22px; padding: 16px; background: var(--slate-800);
+    border-left: 2px solid var(--amber-dim); border-radius: 0 2px 2px 0;
+  }
+  .panorama-row { display: flex; gap: 12px; align-items: baseline; margin-top: 10px; flex-wrap: wrap; }
+  .panorama-row:first-of-type { margin-top: 12px; }
+  .panorama-fam {
+    font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--amber); min-width: 88px; flex-shrink: 0;
+  }
+  .via-tag { font-size: 9px; color: var(--slate-500); margin-left: 4px; font-style: italic; }
+  .legend { font-family: var(--mono); font-size: 9px; text-transform: none; letter-spacing: 0; color: var(--slate-500); font-weight: normal; margin-left: 10px; }
+  .dot-1 { color: var(--amber); font-size: 9px; }
+  .dot-2 { color: var(--slate-500); font-size: 8px; }
+  .rel-chip.hop2 { opacity: 0.72; border-style: dashed; }
+  .rel-chip[title] { cursor: help; }
+
+  footer { margin-top: 56px; font-family: var(--mono); font-size: 11px; color: var(--slate-500); text-align: center; line-height: 1.8; }
+  footer .badge { color: var(--amber); }
+
+  @media (max-width: 600px) {
+    .wrap { padding: 32px 16px 80px; }
+    h1 { font-size: 22px; }
+    .card-title { font-size: 18px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <p class="eyebrow"><span class="dot"></span>FCE Explorer — Release v1.0</p>
+    <h1>Football Cognitive Engine</h1>
+    <p class="subtitle">Busque um Conceito, Função, Jogador, Pessoa, Organização ou Regra. Toda resposta vem diretamente da Base Oficial compilada — sem geração de texto, sem inferência além do que já está publicado.</p>
+    <div class="search-shell">
+      <input id="search" class="search-box" type="text" placeholder="Falso 9, Pressão Alta, Busquets, Barcelona..." autocomplete="off">
+      <p class="hint">101 Objetos · 802 relações · 8 famílias · sem IA nesta camada</p>
+    </div>
+    <div class="suggestions" id="suggestions"></div>
+  </header>
+
+  <div id="results"></div>
+
+  <footer>
+    <p>Dados servidos diretamente do grafo compilado da Base Oficial (Documento 026 / Release v1.0).<br>
+    <span class="badge">Nenhuma resposta nesta tela foi gerada por modelo de linguagem.</span></p>
+  </footer>
+</div>
+
+<script src="dados_embutidos.js"></script>
+<script src="dados_pbks.js"></script>
+<script>
+// ===== Índice de busca simples, client-side, sem dependência externa =====
+const byId = {};
+FCE_OBJETOS.forEach(o => { if (o.id) byId[o.id] = o; });
+const byIdGlobal = byId;
+
+function familiaLabelSingular(fam) {
+  const map = { OBJ: "Conceito", PES: "Pessoa", ORG: "Organização", MET: "Método", PAR: "Partida", FUN: "Função", JOG: "Jogador", REG: "Regra" };
+  return map[fam] || fam;
+}
+
+function nomeDe(obj) {
+  return obj.campos["Nome"] || obj.campos["Título"] || obj.titulo_arquivo || obj.id;
+}
+
+function buscar(termo) {
+  const t = termo.trim().toLowerCase();
+  if (!t) return [];
+  return FCE_OBJETOS.filter(o => {
+    const nome = nomeDe(o).toLowerCase();
+    return nome.includes(t) || (o.id && o.id.toLowerCase() === t);
+  }).slice(0, 8);
+}
+
+function arestasDe(id) {
+  return {
+    saida: FCE_ARESTAS.filter(e => e.origem === id),
+    entrada: FCE_ARESTAS.filter(e => e.destino === id),
+  };
+}
+
+function familiaLabel(fam) {
+  const map = { OBJ: "Conceitos", PES: "Pessoas", ORG: "Organizações", MET: "Métodos", PAR: "Partidas", FUN: "Função", JOG: "Jogadores", REG: "Regras" };
+  return map[fam] || fam;
+}
+
+const ORDEM_PANORAMA = ["FUN", "OBJ", "ORG", "PES", "MET", "REG", "JOG", "PAR"];
+
+function panorama2Saltos(id) {
+  // 1 salto: vizinhos diretos
+  const hop1 = FCE_ARESTAS.filter(e => e.origem === id || e.destino === id);
+  const fronteira = new Set();
+  hop1.forEach(e => fronteira.add(e.origem === id ? e.destino : e.origem));
+  // 2 saltos: vizinhos dos vizinhos
+  const hop2 = FCE_ARESTAS.filter(e => fronteira.has(e.origem) || fronteira.has(e.destino));
+  const alcancados = new Map(); // id -> {via, verbo, profundidade}
+  hop1.forEach(e => {
+    const outro = e.origem === id ? e.destino : e.origem;
+    if (outro !== id) alcancados.set(outro, { via: null, verbo: e.verbo, profundidade: 1 });
+  });
+  hop2.forEach(e => {
+    [e.origem, e.destino].forEach(node => {
+      if (node !== id && !alcancados.has(node) && byIdGlobal[node]) {
+        const viaNode = fronteira.has(e.origem) ? e.origem : e.destino;
+        if (viaNode !== node) alcancados.set(node, { via: viaNode, verbo: e.verbo, profundidade: 2 });
+      }
+    });
+  });
+  // agrupa por familia
+  const grupos = {};
+  alcancados.forEach((info, oid) => {
+    const obj = byIdGlobal[oid];
+    if (!obj) return;
+    grupos[obj.familia] = grupos[obj.familia] || [];
+    grupos[obj.familia].push({ id: oid, nome: nomeDe(obj), via: info.via, verbo: info.verbo, profundidade: info.profundidade });
+  });
+  return grupos;
+}
+
+function caminhoExplicacao(origemId, item) {
+  const origemNome = byIdGlobal[origemId] ? nomeDe(byIdGlobal[origemId]) : origemId;
+  if (item.profundidade === 1) {
+    return `${origemNome} —${item.verbo.replace(/_/g," ")}→ ${item.nome}`;
+  }
+  const viaNome = byIdGlobal[item.via] ? nomeDe(byIdGlobal[item.via]) : item.via;
+  return `${origemNome} → ${viaNome} —${item.verbo.replace(/_/g," ")}→ ${item.nome}`;
+}
+
+function renderPanorama(id) {
+  const grupos = panorama2Saltos(id);
+  const familiasPresentes = ORDEM_PANORAMA.filter(f => grupos[f] && grupos[f].length);
+  if (!familiasPresentes.length) return "";
+  let html = `<div class="panorama">
+    <p class="field-label">Mapa Cognitivo <span class="legend"><span class="dot-1">●</span> 1 salto &nbsp; <span class="dot-2">●●</span> 2 saltos</span></p>`;
+  familiasPresentes.forEach(fam => {
+    const itens = grupos[fam].slice(0, 10);
+    const chips = itens.map(it => {
+      const dotClass = it.profundidade === 1 ? "dot-1" : "dot-2";
+      const dots = it.profundidade === 1 ? "●" : "●●";
+      const explicacao = caminhoExplicacao(id, it).replace(/"/g, "&quot;");
+      const viaTag = it.via ? `<span class="via-tag">via ${byIdGlobal[it.via] ? nomeDe(byIdGlobal[it.via]) : it.via}</span>` : "";
+      return `<span class="rel-chip ${it.profundidade === 2 ? 'hop2' : ''}" onclick="irPara('${it.id}')" title="Por que estou vendo isso?&#10;${explicacao}"><span class="${dotClass}">${dots}</span> ${it.nome} <span style="color:var(--slate-500)">(${it.id})</span>${viaTag}</span>`;
+    }).join("");
+    html += `<div class="panorama-row"><span class="panorama-fam">${familiaLabel(fam)}</span><div class="rel-group">${chips}</div></div>`;
+  });
+  html += `</div>`;
+  return html;
+}
+
+function renderCampo(label, valor) {
+  if (!valor) return "";
+  return `<div class="field"><p class="field-label">${label}</p><div class="field-value">${valor}</div></div>`;
+}
+
+function renderRelacoes(id) {
+  const { saida, entrada } = arestasDe(id);
+  let html = "";
+  if (saida.length) {
+    const chips = saida.slice(0, 14).map(e => {
+      const alvo = byId[e.destino];
+      const nome = alvo ? nomeDe(alvo) : e.destino;
+      return `<span class="rel-chip" onclick="irPara('${e.destino}')"><span class="verb">${e.verbo.replace(/_/g," ")}</span> ${nome} <span style="color:var(--slate-500)">(${e.destino})</span></span>`;
+    }).join("");
+    html += `<div class="field"><p class="field-label">Conecta-se a (${saida.length})</p><div class="rel-group">${chips}</div></div>`;
+  }
+  if (entrada.length) {
+    const chips = entrada.slice(0, 14).map(e => {
+      const alvo = byId[e.origem];
+      const nome = alvo ? nomeDe(alvo) : e.origem;
+      return `<span class="rel-chip" onclick="irPara('${e.origem}')">${nome} <span style="color:var(--slate-500)">(${e.origem})</span></span>`;
+    }).join("");
+    html += `<div class="field"><p class="field-label">Referenciado por (${entrada.length})</p><div class="rel-group">${chips}</div></div>`;
+  }
+  return html;
+}
+
+// ===== P-004 — Guided Navigation: painel "Próximo Passo" =====
+// Mostra, para cada entidade, os PBKs (Playbooks) do CAT-PBK-001 que a
+// referenciam, agrupados pelos quatro verbos aplicáveis. Cada PBK só aparece
+// aqui se seu vínculo com o ID real da Base foi verificado (ver dados_pbks.js).
+// Estados seguem P-004 Seção 4: Publicado / Catalogado / Bloqueado / Não catalogado.
+const VERBOS_PAINEL = ["Reconhecer", "Neutralizar", "Construir", "Treinar"];
+
+function pbksPara(id) {
+  if (typeof FCE_PBKS === "undefined") return [];
+  return FCE_PBKS.filter(p => p.objetos_reais.includes(id));
+}
+
+function rotuloUsuario(status) {
+  const map = {
+    "Publicado": "Disponível",
+    "Catalogado": "Planejado",
+    "Bloqueado": "Aguardando evidência científica",
+    "Não catalogado": "Ainda não planejado",
+  };
+  return map[status] || status;
+}
+
+function sinalKey(tipo, ref) { return `fce_sinal_${tipo}_${ref}`; }
+
+function registrarSinal(tipo, ref, btnEl) {
+  // Sinal client-side (localStorage) — NÃO é agregação real entre usuários.
+  // Serve como affordance visual até existir um backend (ex.: endpoint em
+  // Supabase, que já é usado em outros projetos) que some sinais por PBK
+  // entre visitantes distintos, conforme DOC-030.
+  const key = sinalKey(tipo, ref);
+  const atual = parseInt(localStorage.getItem(key) || "0", 10);
+  localStorage.setItem(key, String(atual + 1));
+  btnEl.textContent = tipo === "priorizar" ? "Priorizado ✓" : "Sugerido ✓";
+  btnEl.classList.add("done");
+  btnEl.onclick = null;
+}
+
+function pbkDetalheHtml(p) {
+  const checklistHtml = (p.checklist || []).map(c => `<li>${c}</li>`).join("");
+  return `<div class="pp-detail">
+    <div class="pp-detail-field"><span class="pp-detail-label">Objetivo</span><p>${p.objetivo}</p></div>
+    <div class="pp-detail-field"><span class="pp-detail-label">Usuário</span><p>${p.usuario}</p></div>
+    <div class="pp-detail-field"><span class="pp-detail-label">Problema</span><p>${p.problema}</p></div>
+    <div class="pp-detail-field"><span class="pp-detail-label">Objetos da Base</span><p>${p.objetos_desc}</p></div>
+    <div class="pp-detail-field"><span class="pp-detail-label">Funções</span><p>${p.funcoes}</p></div>
+    <div class="pp-detail-field"><span class="pp-detail-label">Jogadores</span><p>${p.jogadores}</p></div>
+    <div class="pp-detail-field"><span class="pp-detail-label">Métodos</span><p>${p.metodos}</p></div>
+    <div class="pp-detail-field"><span class="pp-detail-label">Checklist</span><ul>${checklistHtml}</ul></div>
+    <div class="pp-detail-field"><span class="pp-detail-label">Resultado esperado</span><p>${p.resultado_esperado}</p></div>
+  </div>`;
+}
+
+function togglePbk(pbkId, el) {
+  const detail = document.getElementById(`detail-${pbkId}`);
+  if (!detail) return;
+  const aberto = detail.style.display === "block";
+  detail.style.display = aberto ? "none" : "block";
+  el.querySelector(".pp-expand-icon").textContent = aberto ? "▸" : "▾";
+}
+
+function renderProximoPasso(id) {
+  const pbks = pbksPara(id);
+  if (!pbks.length) return "";
+
+  const porVerbo = {};
+  pbks.forEach(p => { porVerbo[p.verbo] = p; });
+
+  const itens = VERBOS_PAINEL.map(verbo => {
+    const p = porVerbo[verbo];
+    if (!p) {
+      // Não catalogado para esta entidade
+      return `<div class="pp-item is-naocatalogado">
+        <span class="pp-icon wait">·</span>
+        <div class="pp-body">
+          <p class="pp-verb">${verbo} com este perfil</p>
+          <p class="pp-status">${rotuloUsuario("Não catalogado")}</p>
+        </div>
+        <button class="pp-btn" onclick="registrarSinal('sugerir','${id}:${verbo}', this)">Sugerir ↗</button>
+      </div>`;
+    }
+    if (p.status === "Publicado") {
+      return `<div class="pp-item is-publicado is-clickable" onclick="togglePbk('${p.id}', this)">
+        <span class="pp-icon ok">✓</span>
+        <div class="pp-body">
+          <p class="pp-verb">${p.titulo} <span class="pp-expand-icon">▸</span></p>
+          <p class="pp-status publicado">${p.id} · ${rotuloUsuario(p.status)} · clique para ver o Playbook completo</p>
+          <div class="pp-detail" id="detail-${p.id}" style="display:none" onclick="event.stopPropagation()">${pbkDetalheHtml(p)}</div>
+        </div>
+      </div>`;
+    }
+    if (p.status === "Bloqueado") {
+      return `<div class="pp-item is-catalogado">
+        <span class="pp-icon wait">✕</span>
+        <div class="pp-body">
+          <p class="pp-verb">${p.titulo}</p>
+          <p class="pp-status">${p.id} · ${rotuloUsuario(p.status)}</p>
+        </div>
+      </div>`;
+    }
+    // Catalogado — elegível, ainda não escrito
+    return `<div class="pp-item is-catalogado">
+      <span class="pp-icon wait">○</span>
+      <div class="pp-body">
+        <p class="pp-verb">${p.titulo}</p>
+        <p class="pp-status">${p.id} · ${rotuloUsuario(p.status)} · ainda sem conteúdo escrito</p>
+      </div>
+      <button class="pp-btn" onclick="registrarSinal('priorizar','${p.id}', this)">Priorizar isto ↗</button>
+    </div>`;
+  }).join("");
+
+  return `<div class="proximo-passo">
+    <p class="pp-title">Próximo passo</p>
+    <div class="pp-list">${itens}</div>
+  </div>`;
+}
+
+function renderCard(obj) {
+  const c = obj.campos;
+  const nome = nomeDe(obj);
+  const resumo = c["Resumo"] || c["Finalidade Predominante"] || c["Texto/Resumo Normativo"] || "";
+  const estado = c["Estado"] || "—";
+  const evid = c["Nível de Evidência"] || c["Evidência"] || "—";
+
+  let html = `<div class="card">
+    <div class="card-head">
+      <div>
+        <p class="card-id">${obj.id}</p>
+        <h2 class="card-title">${nome}</h2>
+      </div>
+      <span class="card-family">${familiaLabelSingular(obj.familia)}</span>
+    </div>
+    <div class="confidence-bar">
+      <span class="conf-item">Estado: <b>${estado}</b></span>
+      <span class="conf-item">Evidência: <b>${(evid||"").split(" — ")[0]}</b></span>
+    </div>
+    <div class="card-body">`;
+
+  html += renderCampo("Definição / Resumo", resumo);
+  html += renderPanorama(obj.id);
+  if (c["Comportamentos Esperados"]) html += renderCampo("Comportamentos Esperados", c["Comportamentos Esperados"]);
+  if (c["Finalidade Predominante"] && resumo !== c["Finalidade Predominante"]) html += renderCampo("Finalidade Predominante", c["Finalidade Predominante"]);
+  html += renderRelacoes(obj.id);
+  if (c["Referências"]) html += renderCampo("Fontes", c["Referências"].slice(0, 400) + (c["Referências"].length > 400 ? "…" : ""));
+  html += renderProximoPasso(obj.id);
+
+  html += `</div></div>`;
+  return html;
+}
+
+function irPara(id) {
+  const obj = byId[id];
+  if (!obj) return;
+  document.getElementById("search").value = nomeDe(obj);
+  renderResultados([obj]);
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function renderResultados(objs) {
+  const el = document.getElementById("results");
+  if (!objs.length) {
+    el.innerHTML = `<div class="empty-state">Nenhum resultado. A Base tem <strong>101 Objetos</strong> — tente "Falso 9", "Pressão Alta", "Busquets" ou "Barcelona".</div>`;
+    return;
+  }
+  el.innerHTML = objs.map(renderCard).join("");
+}
+
+const searchInput = document.getElementById("search");
+searchInput.addEventListener("input", (e) => {
+  const results = buscar(e.target.value);
+  renderResultados(results);
+});
+
+// sugestões iniciais
+const sugeridos = ["Falso 9", "Pressão Alta", "Busquets", "Barcelona", "Volante Destruidor", "Gegenpressing"];
+document.getElementById("suggestions").innerHTML = sugeridos.map(s =>
+  `<button class="chip" onclick="document.getElementById('search').value='${s}'; renderResultados(buscar('${s}'));">${s}</button>`
+).join("");
+
+// estado inicial vazio
+renderResultados([]);
+document.querySelector('.empty-state') && (document.querySelector('.empty-state').innerHTML =
+  `Digite um termo acima, ou escolha uma sugestão. Cada resultado mostra não só o que a Base sabe, mas também <strong>o que fazer com isso</strong> — veja a seção "Próximo passo" em cada card.`);
+</script>
+</body>
+</html>
