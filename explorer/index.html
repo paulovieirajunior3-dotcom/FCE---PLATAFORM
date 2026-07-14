@@ -124,6 +124,43 @@
     cursor: pointer; text-decoration: underline; text-underline-offset: 3px;
   }
 
+  /* ===== P-004: Próximo Passo ===== */
+  .proximo-passo { margin-top: 22px; padding-top: 20px; border-top: 1px solid var(--line); }
+  .pp-title {
+    font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em;
+    color: var(--slate-500); margin: 0 0 12px;
+  }
+  .pp-list { display: flex; flex-direction: column; gap: 8px; }
+  .pp-item {
+    display: flex; align-items: center; gap: 12px; padding: 10px 12px;
+    border: 1px solid var(--slate-700); border-radius: 2px; background: var(--slate-800);
+  }
+  .pp-item.is-publicado { border-color: rgba(215,163,78,0.35); }
+  .pp-item.is-catalogado { opacity: 0.85; }
+  .pp-item.is-naocatalogado { border-style: dashed; opacity: 0.65; }
+  .pp-icon { font-family: var(--mono); font-size: 13px; width: 18px; text-align: center; flex-shrink: 0; }
+  .pp-icon.ok { color: var(--amber); }
+  .pp-icon.wait { color: var(--slate-500); }
+  .pp-body { flex: 1; min-width: 0; }
+  .pp-verb { font-family: var(--mono); font-size: 13px; color: var(--chalk); margin: 0; }
+  .pp-status { font-family: var(--mono); font-size: 11px; color: var(--slate-500); margin: 2px 0 0; }
+  .pp-status.publicado { color: var(--amber-dim); }
+  .pp-btn {
+    font-family: var(--mono); font-size: 10px; color: var(--chalk-dim); background: transparent;
+    border: 1px solid var(--slate-700); padding: 5px 9px; border-radius: 2px; cursor: pointer;
+    white-space: nowrap; transition: all .15s ease;
+  }
+  .pp-btn:hover { border-color: var(--amber-dim); color: var(--amber); }
+  .pp-btn.done { color: var(--amber); border-color: var(--amber-dim); cursor: default; }
+  .pp-result {
+    margin-top: 8px; padding: 9px 11px; background: var(--slate-900); border-radius: 2px;
+    font-size: 12px; color: var(--chalk-dim); line-height: 1.5;
+  }
+  .pp-why {
+    font-family: var(--mono); font-size: 10px; color: var(--slate-500); cursor: help;
+    border-bottom: 1px dotted var(--slate-500); margin-left: 6px;
+  }
+
   .panorama {
     margin-bottom: 22px; padding: 16px; background: var(--slate-800);
     border-left: 2px solid var(--amber-dim); border-radius: 0 2px 2px 0;
@@ -173,6 +210,7 @@
 </div>
 
 <script src="dados_embutidos.js"></script>
+<script src="dados_pbks.js"></script>
 <script>
 // ===== Índice de busca simples, client-side, sem dependência externa =====
 const byId = {};
@@ -299,6 +337,99 @@ function renderRelacoes(id) {
   return html;
 }
 
+// ===== P-004 — Guided Navigation: painel "Próximo Passo" =====
+// Mostra, para cada entidade, os PBKs (Playbooks) do CAT-PBK-001 que a
+// referenciam, agrupados pelos quatro verbos aplicáveis. Cada PBK só aparece
+// aqui se seu vínculo com o ID real da Base foi verificado (ver dados_pbks.js).
+// Estados seguem P-004 Seção 4: Publicado / Catalogado / Bloqueado / Não catalogado.
+const VERBOS_PAINEL = ["Reconhecer", "Neutralizar", "Construir", "Treinar"];
+
+function pbksPara(id) {
+  if (typeof FCE_PBKS === "undefined") return [];
+  return FCE_PBKS.filter(p => p.objetos_reais.includes(id));
+}
+
+function rotuloUsuario(status) {
+  const map = {
+    "Publicado": "Disponível",
+    "Catalogado": "Planejado",
+    "Bloqueado": "Aguardando evidência científica",
+    "Não catalogado": "Ainda não planejado",
+  };
+  return map[status] || status;
+}
+
+function sinalKey(tipo, ref) { return `fce_sinal_${tipo}_${ref}`; }
+
+function registrarSinal(tipo, ref, btnEl) {
+  // Sinal client-side (localStorage) — NÃO é agregação real entre usuários.
+  // Serve como affordance visual até existir um backend (ex.: endpoint em
+  // Supabase, que já é usado em outros projetos) que some sinais por PBK
+  // entre visitantes distintos, conforme DOC-030.
+  const key = sinalKey(tipo, ref);
+  const atual = parseInt(localStorage.getItem(key) || "0", 10);
+  localStorage.setItem(key, String(atual + 1));
+  btnEl.textContent = tipo === "priorizar" ? "Priorizado ✓" : "Sugerido ✓";
+  btnEl.classList.add("done");
+  btnEl.onclick = null;
+}
+
+function renderProximoPasso(id) {
+  const pbks = pbksPara(id);
+  if (!pbks.length) return "";
+
+  const porVerbo = {};
+  pbks.forEach(p => { porVerbo[p.verbo] = p; });
+
+  const itens = VERBOS_PAINEL.map(verbo => {
+    const p = porVerbo[verbo];
+    if (!p) {
+      // Não catalogado para esta entidade
+      return `<div class="pp-item is-naocatalogado">
+        <span class="pp-icon wait">·</span>
+        <div class="pp-body">
+          <p class="pp-verb">${verbo} com este perfil</p>
+          <p class="pp-status">${rotuloUsuario("Não catalogado")}</p>
+        </div>
+        <button class="pp-btn" onclick="registrarSinal('sugerir','${id}:${verbo}', this)">Sugerir ↗</button>
+      </div>`;
+    }
+    if (p.status === "Publicado") {
+      return `<div class="pp-item is-publicado">
+        <span class="pp-icon ok">✓</span>
+        <div class="pp-body">
+          <p class="pp-verb">${p.titulo}<span class="pp-why" title="${p.id} está ligado a ${id} na Base Oficial.">por quê?</span></p>
+          <p class="pp-status publicado">${p.id} · ${rotuloUsuario(p.status)}</p>
+          ${p.resultado_esperado ? `<div class="pp-result">${p.resultado_esperado}</div>` : ""}
+        </div>
+      </div>`;
+    }
+    if (p.status === "Bloqueado") {
+      return `<div class="pp-item is-catalogado">
+        <span class="pp-icon wait">✕</span>
+        <div class="pp-body">
+          <p class="pp-verb">${p.titulo}</p>
+          <p class="pp-status">${p.id} · ${rotuloUsuario(p.status)}</p>
+        </div>
+      </div>`;
+    }
+    // Catalogado — elegível, ainda não escrito
+    return `<div class="pp-item is-catalogado">
+      <span class="pp-icon wait">○</span>
+      <div class="pp-body">
+        <p class="pp-verb">${p.titulo}</p>
+        <p class="pp-status">${p.id} · ${rotuloUsuario(p.status)}</p>
+      </div>
+      <button class="pp-btn" onclick="registrarSinal('priorizar','${p.id}', this)">Priorizar isto ↗</button>
+    </div>`;
+  }).join("");
+
+  return `<div class="proximo-passo">
+    <p class="pp-title">Próximo passo</p>
+    <div class="pp-list">${itens}</div>
+  </div>`;
+}
+
 function renderCard(obj) {
   const c = obj.campos;
   const nome = nomeDe(obj);
@@ -326,6 +457,7 @@ function renderCard(obj) {
   if (c["Finalidade Predominante"] && resumo !== c["Finalidade Predominante"]) html += renderCampo("Finalidade Predominante", c["Finalidade Predominante"]);
   html += renderRelacoes(obj.id);
   if (c["Referências"]) html += renderCampo("Fontes", c["Referências"].slice(0, 400) + (c["Referências"].length > 400 ? "…" : ""));
+  html += renderProximoPasso(obj.id);
 
   html += `</div></div>`;
   return html;
@@ -363,7 +495,7 @@ document.getElementById("suggestions").innerHTML = sugeridos.map(s =>
 // estado inicial vazio
 renderResultados([]);
 document.querySelector('.empty-state') && (document.querySelector('.empty-state').innerHTML =
-  `Digite um termo acima, ou escolha uma sugestão. Critério de aceite do Sprint P-001: buscar <strong>"Falso 9"</strong> deve retornar exatamente a mesma resposta já validada no <em>consulta_prototipo.py</em>.`);
+  `Digite um termo acima, ou escolha uma sugestão. Cada resultado mostra não só o que a Base sabe, mas também <strong>o que fazer com isso</strong> — veja a seção "Próximo passo" em cada card.`);
 </script>
 </body>
 </html>
